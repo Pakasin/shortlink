@@ -1,0 +1,26 @@
+{
+  "name": "shortlink-backend",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "db:init": "bun run src/scripts/init-db.ts",
+    "db:seed": "bun run src/scripts/seed.ts"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.4.1",
+    "@elysiajs/jwt": "^1.4.1",
+    "@elysiajs/static": "^1.0.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^17.4.2",
+    "elysia": "^1.0.0",
+    "postgres": "^3.4.9",
+    "shortlink-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "@types/bcryptjs": "^2.4.6"
+  }
+}
