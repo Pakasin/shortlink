@@ -1,0 +1,71 @@
+# ═══ DEPENDENCIES ═══
+node_modules/
+.pnp
+.pnp.js
+
+# ═══ BUN ═══
+.bun/
+bun.lockb
+
+# ═══ ENVIRONMENT ═══
+.env
+.env.local
+.env.*.local
+.env.production.local
+
+# ═══ BUILD & DIST ═══
+dist/
+build/
+out/
+.next/
+.nuxt/
+vite.config.ts.timestamp-*
+
+# ═══ IDE & EDITOR ═══
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.code-workspace
+
+# ═══ LOGS ═══
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ═══ TESTING ═══
+coverage/
+.nyc_output/
+
+# ═══ OS FILES ═══
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# ═══ VITE ═══
+.vite/
+
+# ═══ DATABASE ═══
+*.sqlite
+*.sqlite3
+data/
+
+# ═══ TEMP FILES ═══
+.cache/
+tmp/
+temp/
+
+# ═══ DEVELOPMENT ═══
+.vercel
+.turbo
+dist-ssr/
+*.local
