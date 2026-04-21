@@ -24,12 +24,6 @@ apiClient.interceptors.request.use(
       // ✅ Backend อ่านจาก headers.authorization เท่านั้น
       config.headers.Authorization = `Bearer ${token}`;
     }
-    if (import.meta.env.DEV) {
-      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
-        hasToken: !!token,
-        data: config.data,
-      });
-    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -42,9 +36,6 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const url    = error.config?.url;
 
-    if (import.meta.env.DEV) {
-      console.error(`[API Error] ${status} → ${url}`, error.response?.data);
-    }
 
     // Token หมดอายุ / invalid → เคลียร์แล้วไป login
     if (status === 401) {

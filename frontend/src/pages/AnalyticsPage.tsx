@@ -1,71 +1,70 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { linkService } from "../services/link.service";
 import { analyticsService } from "../services/analytics.service";
 import { AnalyticsChart } from "../components/AnalyticsChart";
 import type { Link, LinkAnalytics } from "shortlink-shared";
-import { BarChart3, MousePointer, Globe, TrendingUp, Plus } from "lucide-react"; // ✅ เพิ่ม Plus, ลบ Monitor (unused)
+import { BarChart3, MousePointer, Globe, TrendingUp, Plus } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
-// ─── Design Tokens (Dark Theme - LandingPage Style) ─────────────────
-const C = {
-  bg: "#0f172a",
-  bgGradient: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%)",
-  glass: {
-    background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-    border: "1px solid rgba(255,255,255,0.12)",
-  },
-  primary: "#3b82f6",
-  primaryGradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
-  text: "#ffffff",
-  textMuted: "#94a3b8",
-  textDim: "#64748b",
-  surface: "rgba(255,255,255,0.06)",
-  surfaceHigh: "rgba(255,255,255,0.1)",
-};
-
-// ─── Stat Card ─────────────────────────────────────────────────
-const StatCard = ({
-  icon, label, value, trend,
-}: {
-  icon: React.ReactNode; label: string; value: string | number; trend?: string;
-}) => (
-  <div
-    className="rounded-2xl p-5 flex items-center gap-4 transition-transform hover:scale-[1.02]"
-    style={{ ...C.glass, borderRadius: "20px", padding: "20px" }}
-  >
-    <div
-      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-      style={{ background: "rgba(59,130,246,0.15)" }}
-    >
-      {icon}
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: C.textDim }}>
-        {label}
-      </p>
-      <div className="flex items-center gap-2">
-        <p
-          className="text-xl font-extrabold truncate"
-          style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
-        >
-          {typeof value === "number" ? value.toLocaleString() : value}
-        </p>
-        {trend && (
-          <span className="flex items-center gap-0.5 text-xs font-semibold flex-shrink-0" style={{ color: "#22c55e" }}>
-            <TrendingUp size={10} />{trend}
-          </span>
-        )}
-      </div>
-    </div>
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
   </div>
 );
 
 export const AnalyticsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { isDarkMode, isAuthenticated, loading, t } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate("/login", { replace: true });
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+  
+  const C = isDarkMode ? {
+    bg: "#0f172a",
+    bgGradient: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%)",
+    glass: { background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.12)" },
+    primary: "#3b82f6", primaryGradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
+    text: "#ffffff", textMuted: "#94a3b8", textDim: "#64748b",
+    surface: "rgba(255,255,255,0.06)", surfaceHigh: "rgba(255,255,255,0.1)",
+  } : {
+    bg: "#f8fafc",
+    bgGradient: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #dbeafe 100%)",
+    glass: { background: "linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(0,0,0,0.05)" },
+    primary: "#3b82f6", primaryGradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
+    text: "#0f172a", textMuted: "#64748b", textDim: "#94a3b8",
+    surface: "rgba(0,0,0,0.03)", surfaceHigh: "rgba(0,0,0,0.06)",
+  };
+
+  const StatCard = ({ icon, label, value, trend }: { icon: React.ReactNode; label: string; value: string | number; trend?: string; }) => (
+    <div className="rounded-2xl p-5 flex items-center gap-4 transition-transform hover:scale-[1.02]" style={{ ...C.glass, borderRadius: "20px", padding: "20px" }}>
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: isDarkMode ? "rgba(59,130,246,0.15)" : "rgba(59,130,246,0.1)" }}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: C.textDim }}>{label}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xl font-extrabold truncate" style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}>
+            {typeof value === "number" ? value.toLocaleString() : value}
+          </p>
+          {trend && (
+            <span className="flex items-center gap-0.5 text-xs font-semibold flex-shrink-0" style={{ color: "#22c55e" }}><TrendingUp size={10} />{trend}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
   const [links, setLinks] = useState<Link[]>([]);
   const [selectedLink, setSelectedLink] = useState<Link | null>(null);
   const [analytics, setAnalytics] = useState<LinkAnalytics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchLinks = async () => {
     try {
@@ -116,7 +115,7 @@ export const AnalyticsPage: React.FC = () => {
             50% { background-position: 100% 50%; }
           }
           .gradient-bg {
-            background: linear-gradient(-45deg, #0f172a, #1e293b, #1e3a8a, #312e81);
+            background: ${C.bgGradient};
             background-size: 400% 400%;
             animation: gradientShift 15s ease infinite;
           }
@@ -152,10 +151,10 @@ export const AnalyticsPage: React.FC = () => {
             className="font-headline text-2xl font-bold mb-3"
             style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
           >
-            No Analytics Data
+            {t.analytics.noData}
           </h2>
           <p className="text-sm mb-6" style={{ color: C.textMuted }}>
-            Create some links first to see their analytics performance.
+            {t.analytics.noDataDesc}
           </p>
           <a
             href="/create"
@@ -167,7 +166,7 @@ export const AnalyticsPage: React.FC = () => {
             }}
           >
             <Plus size={16} />
-            Create Your First Link
+            {t.analytics.createFirst}
           </a>
         </div>
       </div>
@@ -189,7 +188,7 @@ export const AnalyticsPage: React.FC = () => {
           50% { background-position: 100% 50%; }
         }
         .gradient-bg {
-          background: linear-gradient(-45deg, #0f172a, #1e293b, #1e3a8a, #312e81);
+          background: ${C.bgGradient};
           background-size: 400% 400%;
           animation: gradientShift 15s ease infinite;
         }
@@ -221,17 +220,17 @@ export const AnalyticsPage: React.FC = () => {
             className="font-headline text-3xl font-bold mb-2"
             style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
           >
-            Analytics
+            {t.analytics.title}
           </h1>
           <p className="text-sm" style={{ color: C.textMuted }}>
-            Track your link performance in real-time
+            {t.analytics.subtitle}
           </p>
         </div>
 
         {/* Link Selector */}
         <div className="mb-8">
           <label className="block text-xs font-bold uppercase tracking-wider mb-3" style={{ color: C.textDim }}>
-            Select Link
+            {t.analytics.selectLink}
           </label>
           <select
             value={selectedLink?.id || ""}
@@ -248,7 +247,7 @@ export const AnalyticsPage: React.FC = () => {
             }}
           >
             {links.map((link) => (
-              <option key={link.id} value={link.id} style={{ background: "#1e293b" }}>
+              <option key={link.id} value={link.id} style={{ background: isDarkMode ? "#1e293b" : "#ffffff", color: C.text }}>
                 {link.shortCode} → {link.originalUrl.substring(0, 50)}...
               </option>
             ))}
@@ -261,18 +260,18 @@ export const AnalyticsPage: React.FC = () => {
             <div className="grid md:grid-cols-3 gap-4 mb-8">
               <StatCard
                 icon={<MousePointer size={20} style={{ color: "#60a5fa" }} />}
-                label="Total Clicks"
+                label={t.analytics.totalClicks}
                 value={analytics.totalClicks.toLocaleString()}
                 trend="+12.5%"
               />
               <StatCard
                 icon={<Globe size={20} style={{ color: "#4ade80" }} />}
-                label="Unique Visitors"
+                label={t.analytics.uniqueVisitors}
                 value={analytics.uniqueVisitors.toLocaleString()}
               />
               <StatCard
                 icon={<BarChart3 size={20} style={{ color: "#a78bfa" }} />}
-                label="Short URL"
+                label={t.analytics.shortUrl}
                 value={selectedLink?.shortCode || "—"}
               />
             </div>
@@ -292,13 +291,13 @@ export const AnalyticsPage: React.FC = () => {
                     className="font-headline text-lg font-bold"
                     style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
                   >
-                    Clicks Over Time
+                    {t.analytics.clicksOverTime}
                   </h3>
                   <span
                     className="ml-auto text-xs px-3 py-1 rounded-full"
                     style={{ background: C.surfaceHigh, color: C.textDim }}
                   >
-                    Last 7 days
+                    {t.analytics.last7Days}
                   </span>
                 </div>
                 <AnalyticsChart
@@ -322,13 +321,13 @@ export const AnalyticsPage: React.FC = () => {
                     className="font-headline text-lg font-bold"
                     style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
                   >
-                    Top Referrers
+                    {t.analytics.topReferrers}
                   </h3>
                   <span
                     className="ml-auto text-xs px-3 py-1 rounded-full"
                     style={{ background: C.surfaceHigh, color: C.textDim }}
                   >
-                    All time
+                    {t.common.allTime}
                   </span>
                 </div>
                 <AnalyticsChart
@@ -352,7 +351,7 @@ export const AnalyticsPage: React.FC = () => {
                     className="font-headline text-lg font-bold"
                     style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
                   >
-                    Devices
+                    {t.analytics.devices}
                   </h3>
                 </div>
                 <AnalyticsChart
@@ -376,7 +375,7 @@ export const AnalyticsPage: React.FC = () => {
                     className="font-headline text-lg font-bold"
                     style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
                   >
-                    Browsers
+                    {t.analytics.browsers}
                   </h3>
                 </div>
                 <AnalyticsChart

@@ -1,10 +1,18 @@
 import { Elysia, t } from "elysia";
+import { jwt } from "@elysiajs/jwt";
 import { LinkService } from "../services/link.service";
 import type { CreateLinkRequest, UpdateLinkRequest } from "shortlink-shared";
 
 const linkService = new LinkService();
 
 export const linkRoutes = new Elysia({ prefix: "/links" })
+  .use(
+    jwt({
+      name: "jwt",
+      secret: process.env.JWT_SECRET || "your-secret-key",
+      exp: "7d",
+    })
+  )
   // Create link (public - optional auth)
   .post(
     "/",

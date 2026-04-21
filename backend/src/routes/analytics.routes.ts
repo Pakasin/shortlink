@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { jwt } from "@elysiajs/jwt";
 import { AnalyticsService } from "../services/analytics.service";
 import { LinkService } from "../services/link.service";
 
@@ -6,6 +7,13 @@ const analyticsService = new AnalyticsService();
 const linkService = new LinkService();
 
 export const analyticsRoutes = new Elysia({ prefix: "/analytics" })
+  .use(
+    jwt({
+      name: "jwt",
+      secret: process.env.JWT_SECRET || "your-secret-key",
+      exp: "7d",
+    })
+  )
   // Get analytics for a specific link (protected)
   .get(
     "/:linkId",

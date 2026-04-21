@@ -10,7 +10,13 @@ export class AuthService {
     const [user] = await sql`
       SELECT id, email, name, created_at FROM users WHERE email = ${email}
     `;
-    return user || null;
+    if (!user) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || null,
+      createdAt: user.created_at,
+    };
   }
 
   // ═══ REGISTER ═══
@@ -48,7 +54,7 @@ export class AuthService {
     `;
     if (!user) return null;
 
-    const isValid = await bcrypt.compare(data.password, user.password);
+    const isValid = await bcrypt.compare(data.password, user.password_hash);
     if (!isValid) return null;
 
     return {
@@ -66,6 +72,43 @@ export class AuthService {
       FROM users WHERE id = ${id}
     `;
     if (!user) return null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || null,
+      createdAt: user.created_at,
+    };
+  }
+
+  // ═══ FIND OR CREATE OAUTH USER ═══
+  async findOrCreateOAuthUser(
+    psuId: string,
+    email: string,
+    name: string
+  ): Promise<User> {
+    const [existing] = await sql`
+      SELECT id, email, name, created_at FROM users 
+      WHERE psu_id = ${psuId} OR email = ${email}
+    `;
+
+    if (existing) {
+      await sql`
+        UPDATE users SET psu_id = ${psuId}, provider = 'psu' WHERE id = ${existing.id}
+      `;
+      return {
+        id: existing.id,
+        email: existing.email,
+        name: existing.name || null,
+        createdAt: existing.created_at,
+      };
+    }
+
+    const [user] = await sql`
+      INSERT INTO users (email, name, psu_id, provider)
+      VALUES (${email}, ${name}, ${psuId}, 'psu')
+      RETURNING id, email, name, created_at
+    `;
 
     return {
       id: user.id,

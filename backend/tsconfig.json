@@ -8,10 +8,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
     "outDir": "./dist",
-    "rootDir": ".",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],

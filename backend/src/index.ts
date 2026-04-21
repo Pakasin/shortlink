@@ -5,6 +5,7 @@ import { staticPlugin } from "@elysiajs/static";
 import { join } from "path";
 
 import { authRoutes } from "./routes/auth.routes";
+import { oauthRoutes } from "./routes/oauth.routes";
 import { linkRoutes } from "./routes/link.routes";
 import { analyticsRoutes } from "./routes/analytics.routes";
 import { redirectRoutes } from "./routes/redirect.routes";
@@ -44,7 +45,7 @@ const app = new Elysia()
 
 // ── API ─────────────────────────────
 .group("/api", (app) =>
-  app.use(authRoutes).use(linkRoutes).use(analyticsRoutes)
+  app.use(authRoutes).use(oauthRoutes).use(linkRoutes).use(analyticsRoutes)
 )
 
 // ── 🔥 Redirect (ต้องอยู่หลัง API แต่ก่อน static) ──

@@ -2,7 +2,8 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isLoading } = useAuth();
+  const isAuthenticated = !!localStorage.getItem('token');
 
   if (isLoading) {
     return (

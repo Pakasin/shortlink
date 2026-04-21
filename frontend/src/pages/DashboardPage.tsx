@@ -1,115 +1,70 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { LinksList } from "../components/LinksList";
+import { EditLinkModal } from "../components/EditLinkModal";
 import { linkService } from "../services/link.service";
 import { analyticsService } from "../services/analytics.service";
 import type { Link as LinkType } from "shortlink-shared";
-import {
-  Link2, MousePointerClick, Plus,
-  BarChart2, Loader2, TrendingUp,
-} from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
+import { Link2, MousePointerClick, Plus, BarChart2, TrendingUp } from "lucide-react";
 
-// ─── Design Tokens (Dark Theme - LandingPage Style) ─────────────────
-const C = {
-  bg: "#0f172a",
-  bgGradient: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%)",
-  glass: {
-    background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-    border: "1px solid rgba(255,255,255,0.12)",
-  },
-  primary: "#3b82f6",
-  primaryGradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
-  text: "#ffffff",
-  textMuted: "#94a3b8",
-  textDim: "#64748b",
-  surface: "rgba(255,255,255,0.06)",
-  surfaceHigh: "rgba(255,255,255,0.1)",
-  error: "#f87171",
-};
+const LoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-blue-950">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading...</p>
+    </div>
+  </div>
+);
 
-// ─── Stat Card ─────────────────────────────────────────────────
-const StatCard = ({
-  icon, label, value, sub, trend,
-}: {
+const StatCard = ({ icon, label, value, sub, trend }: {
   icon: React.ReactNode; label: string; value: string | number; sub?: string; trend?: string;
 }) => (
-  <div
-    className="rounded-2xl p-6 flex items-start gap-4 transition-transform hover:scale-[1.02]"
-    style={{
-      ...C.glass,
-      borderRadius: "20px",
-      padding: "24px",
-    }}
-  >
-    <div
-      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-      style={{ background: "rgba(59,130,246,0.15)" }}
-    >
-      {icon}
-    </div>
+  <div className="rounded-2xl p-6 flex items-start gap-4 transition-transform hover:scale-[1.02] bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.12] shadow-sm dark:shadow-none">
+    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-50 dark:bg-blue-500/15">{icon}</div>
     <div className="flex-1">
-      <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: C.textDim }}>
-        {label}
-      </p>
-      <p
-        className="text-2xl font-extrabold"
-        style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
-      >
-        {typeof value === "number" ? value.toLocaleString() : value}
-      </p>
+      <p className="text-xs font-bold uppercase tracking-widest mb-1 text-slate-400 dark:text-slate-500">{label}</p>
+      <p className="text-2xl font-display font-extrabold text-slate-900 dark:text-white">{typeof value === "number" ? value.toLocaleString() : value}</p>
       {sub && (
         <div className="flex items-center gap-1 mt-1">
-          {trend && (
-            <span className="flex items-center gap-0.5 text-xs font-semibold" style={{ color: "#22c55e" }}>
-              <TrendingUp size={10} />{trend}
-            </span>
-          )}
-          <span className="text-xs" style={{ color: C.textMuted }}>{sub}</span>
+          {trend && <span className="flex items-center gap-0.5 text-xs font-semibold text-green-500"><TrendingUp size={10} />{trend}</span>}
+          <span className="text-xs text-slate-400 dark:text-slate-500">{sub}</span>
         </div>
       )}
     </div>
   </div>
 );
 
-// ─── Main Component ────────────────────────────────────────────
 export const DashboardPage: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading, t } = useAuth();
+  const navigate = useNavigate();
   const [links, setLinks] = useState<LinkType[]>([]);
   const [summary, setSummary] = useState({ totalLinks: 0, totalClicks: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [editingLink, setEditingLink] = useState<LinkType | null>(null);
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate("/login", { replace: true });
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       let linksData: LinkType[] = [];
       let sessionId: string | undefined;
-
-      if (isAuthenticated) {
-        linksData = await linkService.getUserLinks();
-      } else {
-        sessionId = localStorage.getItem("anonymous_session") ?? undefined;
-        if (sessionId) {
-          linksData = await linkService.getAnonymousLinks(sessionId);
-        }
-      }
-
-      const summaryData =
-        isAuthenticated
-          ? await analyticsService.getUserSummary()
-          : sessionId
-            ? await analyticsService.getUserSummary(sessionId)
-            : { totalLinks: 0, totalClicks: 0 };
-
-      setLinks(linksData);
-      setSummary(summaryData);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-    } finally {
-      setIsLoading(false);
-    }
+      if (isAuthenticated) { linksData = await linkService.getUserLinks(); }
+      else { sessionId = localStorage.getItem("anonymous_session") ?? undefined; if (sessionId) linksData = await linkService.getAnonymousLinks(sessionId); }
+      const summaryData = isAuthenticated ? await analyticsService.getUserSummary() : sessionId ? await analyticsService.getUserSummary(sessionId) : { totalLinks: 0, totalClicks: 0 };
+      setLinks(linksData); setSummary(summaryData);
+    } catch (error) { console.error("Failed to fetch data:", error); }
+    finally { setIsLoading(false); }
   }, [isAuthenticated]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -118,183 +73,56 @@ export const DashboardPage: React.FC = () => {
     try {
       await linkService.deleteLink(id);
       setLinks((prev) => prev.filter((l) => l.id !== id));
-      setSummary((prev) => ({
-        ...prev,
-        totalLinks: Math.max(0, prev.totalLinks - 1),
-      }));
-    } catch (error) {
-      console.error("Failed to delete link:", error);
-    }
+      setSummary((prev) => ({ ...prev, totalLinks: Math.max(0, prev.totalLinks - 1) }));
+      toast.success(t.links.linkDeleted);
+    } catch { toast.error(t.links.failedDelete); }
   };
 
-  // ─── Loading ───────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: C.bgGradient }}
-      >
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
-          @keyframes gradientShift {
-            0%,100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-          }
-          .gradient-bg {
-            background: linear-gradient(-45deg, #0f172a, #1e293b, #1e3a8a, #312e81);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
-          }
-        `}</style>
-        <div className="flex flex-col items-center gap-4">
-          <div
-            className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin"
-            style={{ borderColor: C.primary, borderTopColor: "transparent" }}
-          />
-          <p className="text-sm font-medium" style={{ color: C.textMuted, fontFamily: "'Inter', sans-serif" }}>
-            Loading your dashboard...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const handleUpdate = async (id: number, updates: { url?: string; customAlias?: string; isActive?: boolean }) => {
+    await linkService.updateLink(id, updates);
+    toast.success(t.links.linkUpdated);
+    await fetchData();
+  };
 
-  // ─── Render ────────────────────────────────────────────────
+  const handleToggleActive = async (link: LinkType) => {
+    try {
+      await linkService.updateLink(link.id, { isActive: !link.isActive });
+      setLinks((prev) => prev.map((l) => l.id === link.id ? { ...l, isActive: !l.isActive } : l));
+      toast.success(link.isActive ? t.links.linkDisabled : t.links.linkEnabled);
+    } catch { toast.error(t.links.failedToggle); }
+  };
+
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: C.bgGradient,
-        fontFamily: "'Inter', sans-serif",
-        overflowX: "hidden",
-      }}
-    >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
-        @keyframes gradientShift {
-          0%,100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        .gradient-bg {
-          background: linear-gradient(-45deg, #0f172a, #1e293b, #1e3a8a, #312e81);
-          background-size: 400% 400%;
-          animation: gradientShift 15s ease infinite;
-        }
-        .float-blob { animation: float 8s ease-in-out infinite; }
-        @keyframes float {
-          0%,100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(5deg); }
-        }
-      `}</style>
-
-      {/* Background Blobs */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none gradient-bg">
-        <div
-          className="float-blob absolute rounded-full blur-[120px] opacity-20"
-          style={{
-            top: "-10%",
-            right: "-10%",
-            width: "40%",
-            height: "40%",
-            background: "rgba(59,130,246,0.25)",
-          }}
-        />
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-10">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-blue-950 transition-colors">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-10">
-          <h1
-            className="text-3xl font-extrabold tracking-tight mb-2"
-            style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
-          >
-            Dashboard
-          </h1>
-          <p className="text-sm" style={{ color: C.textMuted }}>
-            Welcome back,{" "}
-            <span className="font-semibold" style={{ color: C.primary }}>
-              {user?.name || user?.email?.split("@")[0] || "User"}
-            </span>
-          </p>
+          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2 text-slate-900 dark:text-white">{t.dashboard.title}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t.dashboard.welcomeBack} <span className="font-semibold text-blue-500">{user?.name || user?.email?.split("@")[0] || "User"}</span></p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <StatCard
-            icon={<Link2 size={22} style={{ color: C.primary }} />}
-            label="Total Links"
-            value={summary.totalLinks}
-            sub="All time"
-          />
-          <StatCard
-            icon={<MousePointerClick size={22} style={{ color: "#60a5fa" }} />}
-            label="Total Clicks"
-            value={summary.totalClicks}
-            sub="Across all links"
-            trend={summary.totalClicks > 0 ? "+12.5%" : undefined}
-          />
-          <StatCard
-            icon={<BarChart2 size={22} style={{ color: "#a78bfa" }} />}
-            label="Avg. Clicks"
-            value={
-              summary.totalLinks
-                ? (summary.totalClicks / summary.totalLinks).toFixed(1)
-                : "0"
-            }
-            sub="Per link"
-          />
+          <StatCard icon={<Link2 size={22} className="text-blue-500" />} label={t.dashboard.totalLinks} value={summary.totalLinks} sub={t.common.allTime} />
+          <StatCard icon={<MousePointerClick size={22} className="text-blue-400" />} label={t.dashboard.totalClicks} value={summary.totalClicks} sub={t.dashboard.acrossAllLinks} trend={summary.totalClicks > 0 ? "+12.5%" : undefined} />
+          <StatCard icon={<BarChart2 size={22} className="text-purple-400" />} label={t.dashboard.avgClicks} value={summary.totalLinks ? (summary.totalClicks / summary.totalLinks).toFixed(1) : "0"} sub={t.common.perLink} />
         </div>
 
-        {/* Links Section */}
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{
-            ...C.glass,
-            borderRadius: "24px",
-          }}
-        >
-          {/* Section Header */}
-          <div
-            className="px-6 py-5 flex justify-between items-center border-b"
-            style={{ borderColor: "rgba(255,255,255,0.08)" }}
-          >
-            <h2
-              className="font-bold text-base flex items-center gap-2"
-              style={{ fontFamily: "'Manrope', sans-serif", color: C.text }}
-            >
-              Your Links
-              <span
-                className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{ background: C.surfaceHigh, color: C.textMuted }}
-              >
-                {links.length}
-              </span>
+        <div className="rounded-3xl overflow-hidden bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.12] shadow-sm dark:shadow-none">
+          <div className="px-6 py-5 flex justify-between items-center border-b border-slate-200 dark:border-white/[0.08]">
+            <h2 className="font-heading font-bold text-base flex items-center gap-2 text-slate-900 dark:text-white">
+              {t.links.yourLinks}
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400">{links.length}</span>
             </h2>
-
-            <Link
-              to="/create"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
-              style={{
-                background: C.primaryGradient,
-                fontFamily: "'Manrope', sans-serif",
-                boxShadow: "0 6px 20px rgba(59,130,246,0.3)",
-              }}
-            >
-              <Plus size={16} />
-              Create New
+            <Link to="/create" className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-heading font-bold text-white bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/30 hover:scale-105 transition-all">
+              <Plus size={16} />{t.links.createNew}
             </Link>
           </div>
-
-          {/* LinksList */}
           <div className="p-3">
-            <LinksList
-              links={links}
-              showActions={true}
-              onDelete={handleDelete}
-              emptyMessage="You haven't created any links yet. Click 'Create New' to get started!"
-            />
+            <LinksList links={links} showActions={true} onDelete={handleDelete} onEdit={(link) => setEditingLink(link)} onToggleActive={handleToggleActive} emptyMessage={t.links.noLinksYet} />
           </div>
         </div>
+
+        <EditLinkModal isOpen={editingLink !== null} link={editingLink} onClose={() => setEditingLink(null)} onUpdate={handleUpdate} />
+        <Toaster position="bottom-right" toastOptions={{ style: { background: "rgba(30,41,59,0.95)", color: "#fff", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "14px" }, success: { iconTheme: { primary: "#22c55e", secondary: "#fff" } }, error: { iconTheme: { primary: "#f87171", secondary: "#fff" } } }} />
       </div>
     </div>
   );

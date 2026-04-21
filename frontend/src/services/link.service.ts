@@ -43,6 +43,18 @@
       return assertSuccess(response.data, "Failed to get anonymous links") ?? [];
     },
 
+    // ── UPDATE ────────────────────────────────────────────────
+    async updateLink(
+      id: number,
+      updates: { url?: string; customAlias?: string; isActive?: boolean }
+    ): Promise<Link> {
+      const response = await apiClient.patch<ApiResponse<Link>>(
+        `/api/links/${id}`,
+        updates
+      );
+      return assertSuccess(response.data, "Failed to update link");
+    },
+
     // ── DELETE ────────────────────────────────────────────────
     async deleteLink(id: number): Promise<void> {
       const response = await apiClient.delete<ApiResponse<void> | "">(

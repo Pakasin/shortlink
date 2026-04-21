@@ -2,6 +2,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { useTranslation } from "../contexts/AuthContext";
 
 const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
@@ -18,7 +19,7 @@ const tickStyle = { fontSize: 11, fill: "#475569" };
 const gridStroke = "rgba(255,255,255,0.06)";
 
 // ── Custom Tooltip ──────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={tooltipStyle}>
@@ -26,7 +27,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         {label}
       </div>
       <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {payload.map((p, i) => (
+        {payload.map((p: any, i: any) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: p.color, display: "inline-block", flexShrink: 0 }} />
             <span style={{ color: "#94a3b8", fontSize: 12 }}>{p.name}:</span>
@@ -41,22 +42,25 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 // ── Empty State ─────────────────────────────────────────────
-const EmptyState = () => (
-  <div style={{
-    height: 250, display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "center", gap: 10,
-    color: "#334155", fontSize: 13,
-  }}>
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M3 3v18h18" strokeLinecap="round" />
-      <path d="M7 16l4-4 4 4 4-6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-    No data available
-  </div>
-);
+const EmptyState = () => {
+  const t = useTranslation();
+  return (
+    <div style={{
+      height: 250, display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: 10,
+      color: "#334155", fontSize: 13,
+    }}>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M3 3v18h18" strokeLinecap="round" />
+        <path d="M7 16l4-4 4 4 4-6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {t.analytics.noDataAvailable}
+    </div>
+  );
+};
 
 // ── Line Chart ──────────────────────────────────────────────
-const LinkLineChart = ({ data, xKey, yKey }) => (
+const LinkLineChart = ({ data, xKey, yKey }: any) => (
   <ResponsiveContainer width="100%" height={250}>
     <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
       <defs>
@@ -91,7 +95,7 @@ const LinkLineChart = ({ data, xKey, yKey }) => (
 );
 
 // ── Bar Chart ───────────────────────────────────────────────
-const LinkBarChart = ({ data, xKey, yKey }) => (
+const LinkBarChart = ({ data, xKey, yKey }: any) => (
   <ResponsiveContainer width="100%" height={250}>
     <BarChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
       <defs>
@@ -110,7 +114,7 @@ const LinkBarChart = ({ data, xKey, yKey }) => (
 );
 
 // ── Pie Chart ───────────────────────────────────────────────
-const CustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
   const RADIAN = Math.PI / 180;
   const radius = outerRadius + 24;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -123,7 +127,7 @@ const CustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, n
   );
 };
 
-const LinkPieChart = ({ data, xKey, yKey }) => (
+const LinkPieChart = ({ data, xKey, yKey }: any) => (
   <ResponsiveContainer width="100%" height={250}>
     <PieChart>
       <Pie
@@ -138,7 +142,7 @@ const LinkPieChart = ({ data, xKey, yKey }) => (
         nameKey={xKey}
         paddingAngle={3}
       >
-        {data.map((_, i) => (
+        {data.map((_: any, i: any) => (
           <Cell
             key={`cell-${i}`}
             fill={COLORS[i % COLORS.length]}
@@ -153,7 +157,7 @@ const LinkPieChart = ({ data, xKey, yKey }) => (
 );
 
 // ── Main Export ─────────────────────────────────────────────
-export const AnalyticsChart = ({ type, data, xKey, yKey }) => {
+export const AnalyticsChart = ({ type, data, xKey, yKey }: any) => {
   if (!data || data.length === 0) return <EmptyState />;
   if (type === "line") return <LinkLineChart data={data} xKey={xKey} yKey={yKey} />;
   if (type === "bar")  return <LinkBarChart  data={data} xKey={xKey} yKey={yKey} />;

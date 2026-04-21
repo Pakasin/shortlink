@@ -9,6 +9,7 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { CreateLinkPage } from "./pages/CreateLinkPage";
+import { CallbackPage } from "./pages/CallbackPage";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/callback" element={<CallbackPage />} />
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
