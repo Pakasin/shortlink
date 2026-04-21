@@ -41,7 +41,7 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [links, setLinks] = useState<LinkType[]>([]);
   const [summary, setSummary] = useState({ totalLinks: 0, totalClicks: 0 });
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
   const [editingLink, setEditingLink] = useState<LinkType | null>(null);
 
   useEffect(() => {

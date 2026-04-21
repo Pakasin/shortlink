@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const TOKEN_KEY = "auth_token"; // ← key ที่ใช้ save ใน localStorage
+const TOKEN_KEY = "token"; // Keep in sync with AuthContext/localStorage session restore
 
 // ── Helpers ──────────────────────────────────────────────────
 export const tokenStorage = {
@@ -34,8 +34,6 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
-    const url    = error.config?.url;
-
 
     // Token หมดอายุ / invalid → เคลียร์แล้วไป login
     if (status === 401) {

@@ -8,6 +8,8 @@ import { en, th, type Translations } from "../config/i18n";
 
 interface AuthContextType {
   user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  loading: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
   isDarkMode: boolean;
@@ -24,7 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
   const [language, setLanguage] = useState(() => localStorage.getItem("language") || "th");
 
@@ -36,14 +38,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // ── Restore session on mount ────────────────────────────────
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
+    const token = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
 
-    if (token && user) {
-      try { setUser(JSON.parse(user)); }
-      catch { localStorage.removeItem('token'); localStorage.removeItem('user'); }
+    if (token && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        tokenStorage.clear();
+      }
     }
-    setIsLoading(false);
+
+    if (token) {
+      tokenStorage.set(token);
+    }
+
+    setLoading(false);
   }, []);
 
   const toggleDarkMode = () => {
@@ -56,23 +68,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (data: LoginRequest) => {
     const response = await authService.login(data);
-    localStorage.setItem('token', response.token);
+    localStorage.setItem("token", response.token);
+    tokenStorage.set(response.token);
     localStorage.setItem("user", JSON.stringify(response.user));
     setUser(response.user);
   };
 
   const register = async (data: RegisterRequest) => {
     const response = await authService.register(data);
-    localStorage.setItem('token', response.token);
+    localStorage.setItem("token", response.token);
+    tokenStorage.set(response.token);
     localStorage.setItem("user", JSON.stringify(response.user));
     setUser(response.user);
   };
 
-  const logout = () => { localStorage.removeItem('token'); localStorage.removeItem("user"); setUser(null); };
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    tokenStorage.clear();
+    setUser(null);
+  };
+
+  const isAuthenticated = !!localStorage.getItem("token");
 
   return (
     <AuthContext.Provider value={{
-      user, isLoading, isAuthenticated: !!localStorage.getItem('token'), isDarkMode, language, t,
+      user,
+      setUser,
+      loading,
+      isLoading: loading,
+      isAuthenticated,
+      isDarkMode,
+      language,
+      t,
       login, register, logout, toggleDarkMode, toggleLanguage,
     }}>
       {children}
