@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import type { RegisterRequest } from "shortlink-shared";
@@ -26,10 +26,16 @@ const InputField = ({
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register, t } = useAuth();
+  const { register, t, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState<RegisterRequest>({ email: "", password: "", name: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setIsLoading(true);

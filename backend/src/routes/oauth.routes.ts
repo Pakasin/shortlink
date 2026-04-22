@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
-import { RedisClient } from "bun";
 import { AuthService } from "../services/auth.service";
 
 const authService = new AuthService();
@@ -25,10 +24,17 @@ const PSU_TOKEN_URL = process.env.PSU_TOKEN_URL
 const PSU_USERINFO_URL = process.env.PSU_USERINFO_URL
   ?? "https://eila.psu.ac.th/authen/application/o/userinfo/";
 
-const redis = new RedisClient(process.env.REDIS_URL);
-const OAUTH_STATE_PREFIX     = "oauth_state:";
-const OAUTH_STATE_TTL_SECONDS = 300;
-const OAUTH_STATE_TTL_MS      = 300_000; // 5 minutes
+// ✅ In-memory OAuth state store (replaces Redis — no Redis container needed)
+const OAUTH_STATE_TTL_MS = 300_000; // 5 minutes
+const oauthStateStore = new Map<string, number>();
+
+// Cleanup expired states every 60 seconds
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, ts] of oauthStateStore) {
+    if (now - ts > OAUTH_STATE_TTL_MS) oauthStateStore.delete(key);
+  }
+}, 60_000);
 
 export const oauthRoutes = new Elysia({ prefix: "/auth/psu" })
   .use(
@@ -44,12 +50,7 @@ export const oauthRoutes = new Elysia({ prefix: "/auth/psu" })
     console.log("CALLBACK_URL:", psuCallbackUrl);
 
     const state = crypto.randomUUID();
-    await redis.set(
-      `${OAUTH_STATE_PREFIX}${state}`,
-      Date.now().toString(),
-      "EX",
-      OAUTH_STATE_TTL_SECONDS
-    );
+    oauthStateStore.set(state, Date.now());
 
     const url = new URL(PSU_AUTHORIZE_URL);
     url.searchParams.append("client_id",     psuClientId);
@@ -81,17 +82,16 @@ export const oauthRoutes = new Elysia({ prefix: "/auth/psu" })
         });
       }
 
-      // ✅ Validate Redis state
-      const stateKey = `${OAUTH_STATE_PREFIX}${state}`;
-      const ts = await redis.get(stateKey);
-      if (!ts || Date.now() - Number(ts) > OAUTH_STATE_TTL_MS) {
-        if (ts) await redis.del(stateKey);
+      // ✅ Validate OAuth state
+      const ts = oauthStateStore.get(state);
+      if (!ts || Date.now() - ts > OAUTH_STATE_TTL_MS) {
+        if (ts) oauthStateStore.delete(state);
         return new Response(JSON.stringify({ error: "Invalid or expired state" }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
-      await redis.del(stateKey);
+      oauthStateStore.delete(state);
       console.log("✅ State check passed, exchanging code...");
 
       // Exchange code for token — ✅ ใช้ validated env vars (ไม่มี fallback hardcoded)

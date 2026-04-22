@@ -3,5 +3,12 @@
     "allow": [
       "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"SaaS analytics dashboard professional\" --design-system -p \"Analytics Dashboard\")"
     ]
+  },
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "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",
+    "ANTHROPIC_BASE_URL": "https://openrouter.ai/api/",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "nvidia/nemotron-3-super-120b-a12b:free",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "nvidia/nemotron-3-super-120b-a12b:free",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "nvidia/nemotron-3-super-120b-a12b:free"
   }
 }

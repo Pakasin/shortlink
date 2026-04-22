@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import type { LoginRequest } from "shortlink-shared";
@@ -28,11 +28,17 @@ const InputField = ({
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, t } = useAuth();
+  const { login, t, isAuthenticated } = useAuth();
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const [formData, setFormData] = useState<LoginRequest>({ email: "", password: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setIsLoading(true);

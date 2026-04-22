@@ -75,6 +75,14 @@ const app = new Elysia()
 
 // ── Error handler ───────────────────
 .onError(({ code, error, set }) => {
+  if (code === "NOT_FOUND") {
+    set.status = 404;
+    return { error: "Not found" };
+  }
+  if (code === "VALIDATION") {
+    set.status = 422;
+    return { error: "Validation error" };
+  }
   console.error(`[Error ${code}]`, error);
   set.status = 500;
   return { error: "Internal server error" };

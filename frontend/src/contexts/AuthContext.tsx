@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
-  const isAuthenticated = !!localStorage.getItem("token");
+  const isAuthenticated = !!user && !!localStorage.getItem("token");
 
   return (
     <AuthContext.Provider value={{
