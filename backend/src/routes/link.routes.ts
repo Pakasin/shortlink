@@ -1,7 +1,14 @@
+
 import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { LinkService } from "../services/link.service";
 import type { CreateLinkRequest, UpdateLinkRequest } from "shortlink-shared";
+
+// ✅ FIX P0: Validate JWT_SECRET at startup — no fallback allowed
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  throw new Error("JWT_SECRET is required!");
+}
 
 const linkService = new LinkService();
 
@@ -9,7 +16,7 @@ export const linkRoutes = new Elysia({ prefix: "/links" })
   .use(
     jwt({
       name: "jwt",
-      secret: process.env.JWT_SECRET || "your-secret-key",
+      secret: jwtSecret, // ✅ ใช้ validated secret (ไม่มี fallback)
       exp: "7d",
     })
   )
@@ -21,12 +28,12 @@ export const linkRoutes = new Elysia({ prefix: "/links" })
 
       let userId: number | undefined;
       const auth = headers.authorization;
-      console.log("[Link POST] Auth header:", auth ? `✅ Bearer ${auth.slice(7).slice(0, 10)}...` : "❌ none");
+      // ✅ FIX: ไม่ log token value
+      console.log("[Link POST] Auth header:", auth ? "✅ Bearer present" : "❌ none");
 
       if (auth?.startsWith("Bearer ")) {
         try {
           const payload = await jwt.verify(auth.slice(7));
-          console.log("[Link POST] JWT payload:", payload);
           if (payload) {
             userId = payload.id as number;
             console.log("[Link POST] ✅ User authenticated:", userId);
@@ -34,7 +41,7 @@ export const linkRoutes = new Elysia({ prefix: "/links" })
             console.log("[Link POST] ❌ JWT verify returned null");
           }
         } catch (err) {
-          console.log("[Link POST] ❌ JWT verify error:", err);
+          console.log("[Link POST] ❌ JWT verify error");
         }
       }
 
@@ -81,7 +88,7 @@ export const linkRoutes = new Elysia({ prefix: "/links" })
     return { success: true, data: links };
   })
 
-  // ✅ Update link destination (protected) — shortCode ยังเดิม
+  // ✅ Update link destination (protected)
   .patch(
     "/:id",
     async ({ params, body, headers, jwt, set }) => {
@@ -113,7 +120,11 @@ export const linkRoutes = new Elysia({ prefix: "/links" })
       }
 
       try {
-        const updated = await linkService.updateLink(linkId, payload.id as number, body as UpdateLinkRequest);
+        const updated = await linkService.updateLink(
+          linkId,
+          payload.id as number,
+          body as UpdateLinkRequest
+        );
 
         if (!updated) {
           set.status = 404;
@@ -128,9 +139,7 @@ export const linkRoutes = new Elysia({ prefix: "/links" })
       }
     },
     {
-      params: t.Object({
-        id: t.String(),
-      }),
+      params: t.Object({ id: t.String() }),
       body: t.Object({
         url: t.Optional(t.String({ format: "uri" })),
         customAlias: t.Optional(t.String({ minLength: 3, maxLength: 50 })),
@@ -168,8 +177,6 @@ export const linkRoutes = new Elysia({ prefix: "/links" })
       return { success: true, message: "Link deleted" };
     },
     {
-      params: t.Object({
-        id: t.String(),
-      }),
+      params: t.Object({ id: t.String() }),
     }
   );

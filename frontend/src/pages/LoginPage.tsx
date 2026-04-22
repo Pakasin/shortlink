@@ -29,6 +29,7 @@ const InputField = ({
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login, t } = useAuth();
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const [formData, setFormData] = useState<LoginRequest>({ email: "", password: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +72,7 @@ export const LoginPage: React.FC = () => {
             <div className="mt-4">
               <button
                 type="button"
-                onClick={() => window.location.href = 'http://localhost:3000/api/auth/psu'}
+                onClick={() => window.location.href = `${apiUrl}/api/auth/psu`}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-blue-800 to-blue-900 hover:from-blue-700 hover:to-blue-800 transition-all shadow-md shadow-blue-900/20 active:scale-[0.98]"
               >
                 <img src="https://eila.psu.ac.th/wp-content/uploads/2021/04/EILA-Logo-White.png" alt="PSU" className="h-5 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />

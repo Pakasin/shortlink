@@ -273,7 +273,7 @@ bun run build
 
 ### Environment Variables (.env)
 ```
-JWT_SECRET=your-secret-key
+JWT_SECRET=your-jwt-secret-here
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/shortlink
 NODE_ENV=development
 PORT=3000

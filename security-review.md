@@ -3,202 +3,277 @@
 **Date:** 2026-04-21  
 **Commit:** 013f0f6 - feat: add OAuth support, i18n, edit link modal, and agent configurations  
 **Reviewer:** Security Reviewer Agent  
+**Status:** All HIGH severity issues remediated
 
 ---
 
 ## Executive Summary
 
-Reviewed the recent commit adding OAuth (PSU) integration, i18n support, and UI refactoring. Identified **3 HIGH confidence** and **2 MEDIUM confidence** security issues requiring immediate attention.
+Reviewed the recent commit adding OAuth (PSU) integration, i18n support, and UI refactoring. **All previously identified HIGH severity issues have been remediated.** Remaining findings are LOW severity or informational.
 
-| Severity | Count |
-|----------|-------|
-| HIGH | 3 |
-| MEDIUM | 2 |
-| LOW | 0 |
-
----
-
-## HIGH Severity Findings
-
-### 1. OAuth State Validation Bypass
-
-* **Location:** `backend/src/routes/oauth.routes.ts:56-62`
-* **Severity:** HIGH
-* **Category:** `oauth_csrf_bypass`
-* **Confidence:** 9/10
-
-**Description:** The OAuth state parameter validation is intentionally disabled, allowing CSRF protection to be bypassed. The code explicitly continues even when state is missing or expired:
-
-```typescript
-const ts = stateStore.get(state);
-if (!ts) {
-  console.warn('⚠️ State not found (possible restart), continuing...');
-} else if (Date.now() - ts > 300_000) {
-  console.warn('⚠️ State expired, continuing...');
-} else {
-  stateStore.delete(state);
-}
-```
-
-**Exploit Scenario:** An attacker can craft a malicious OAuth callback URL with a valid authorization code but without a valid state parameter. Since state validation is bypassed, the application will process the callback, potentially allowing account takeover if the attacker can obtain a victim's OAuth authorization code through other means (e.g., XSS on the OAuth provider's redirect).
-
-**Recommendation:** Enforce strict state validation:
-
-```typescript
-const ts = stateStore.get(state);
-if (!ts || Date.now() - ts > 300_000) {
-  return new Response(JSON.stringify({ error: "Invalid or expired state" }), {
-    status: 400,
-  });
-}
-stateStore.delete(state);
-```
+| Severity | Count | Status |
+|----------|-------|--------|
+| HIGH | 0 | All Fixed |
+| MEDIUM | 0 | All Fixed |
+| LOW | 1 | Accepted |
 
 ---
 
-### 2. Hardcoded Weak JWT Secret Fallback
+## Remediated Findings
 
-* **Location:** 
-  - `backend/src/index.ts:36`
-  - `backend/src/routes/auth.routes.ts:12`
-  - `backend/src/routes/oauth.routes.ts:18`
-* **Severity:** HIGH
-* **Category:** `weak_credential`
-* **Confidence:** 10/10
+### P0 - FIXED: Hardcoded Weak JWT Secret Fallback
 
-**Description:** Multiple files use a hardcoded fallback `"your-secret-key"` when `JWT_SECRET` environment variable is not set:
+* **Previous Location:** `backend/src/index.ts:36`, `backend/src/routes/auth.routes.ts:12`, `backend/src/routes/oauth.routes.ts:18`
+* **Previous Severity:** HIGH
+* **Status:** Remediated
 
-```typescript
-secret: process.env.JWT_SECRET || "your-secret-key"
-```
-
-**Exploit Scenario:** If the application is deployed without setting `JWT_SECRET` (common in development or misconfigured production environments), an attacker can forge valid JWT tokens for any user by signing with the known secret `"your-secret-key"`. This enables complete authentication bypass and account takeover.
-
-**Recommendation:** Require `JWT_SECRET` to be set and fail securely if missing:
+**Fix Applied:** All three files now validate `JWT_SECRET` is present and throw an error if missing:
 
 ```typescript
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
-  throw new Error("JWT_SECRET environment variable is required");
+  throw new Error("JWT_SECRET is required!");
 }
-
-// Then use jwtSecret in the jwt() plugin
 ```
+
+**Verification:**
+- `backend/src/index.ts:20-24` - JWT secret validation in main entry point
+- `backend/src/routes/auth.routes.ts:8-12` - Validation in auth routes
+- `backend/src/routes/oauth.routes.ts:8-12` - Validation in oauth routes
 
 ---
 
-### 3. Sensitive Data Logging
+### P0 - FIXED: OAuth State Validation Bypass
 
-* **Location:** `backend/src/routes/oauth.routes.ts:81-82`
-* **Severity:** HIGH
-* **Category:** `sensitive_data_exposure`
-* **Confidence:** 9/10
+* **Previous Location:** `backend/src/routes/oauth.routes.ts:56-62`
+* **Previous Severity:** HIGH
+* **Status:** Remediated
 
-**Description:** The OAuth token exchange response (containing access tokens) is logged to the console:
-
-```typescript
-console.log('PSU Token response status:', tokenRes.status);
-console.log('PSU Token response:', await tokenRes.clone().text());
-```
-
-**Exploit Scenario:** In environments where console logs are persisted (production logging systems, log aggregation services), OAuth access tokens are stored in plaintext. Anyone with access to logs (developers, support staff, compromised log systems) can extract these tokens and impersonate users via the PSU OAuth API.
-
-**Recommendation:** Remove sensitive logging:
+**Fix Applied:** OAuth state is now strictly validated using Redis with 5-minute TTL:
 
 ```typescript
-console.log('PSU Token response status:', tokenRes.status);
-// Do NOT log the response body containing tokens
+const stateKey = `${OAUTH_STATE_PREFIX}${state}`;
+const ts = await redis.get(stateKey);
+if (!ts || Date.now() - Number(ts) > 300_000) {
+  if (ts) {
+    await redis.del(stateKey);
+  }
+  return new Response(JSON.stringify({ error: "Invalid or expired state" }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+await redis.del(stateKey);
 ```
+
+**Verification:** `backend/src/routes/oauth.routes.ts:67-78` - Proper state validation with Redis backend
 
 ---
 
-## MEDIUM Severity Findings
+### P0 - FIXED: Sensitive Data Logging
 
-### 4. Hardcoded Localhost API URL
+* **Previous Location:** `backend/src/routes/oauth.routes.ts:81-82`
+* **Previous Severity:** HIGH
+* **Status:** Remediated
 
-* **Location:** `frontend/src/pages/CallbackPage.tsx:29`
-* **Severity:** MEDIUM
-* **Category:** `misconfiguration`
-* **Confidence:** 8/10
-
-**Description:** The OAuth callback page has a hardcoded localhost URL for the token exchange:
+**Fix Applied:** Token response body is no longer logged. Only the status code is logged for debugging:
 
 ```typescript
-const res = await fetch("http://localhost:3000/api/auth/psu/exchange", {...})
+console.log('PSU Token response status:', tokenRes.status);
+// Token body is NOT logged - prevents sensitive data exposure
 ```
 
-**Exploit Scenario:** In production, this hardcoded URL will fail, breaking OAuth authentication. Additionally, if an attacker can manipulate the frontend environment (e.g., via DNS rebinding or host header injection), they could potentially redirect OAuth token exchanges to a malicious server.
+**Verification:** `backend/src/routes/oauth.routes.ts:97` - Only status is logged
 
-**Recommendation:** Use environment variable or relative URL:
+---
+
+### P1 - FIXED: Hardcoded Localhost API URL
+
+* **Previous Location:** `frontend/src/pages/CallbackPage.tsx:29`
+* **Previous Severity:** MEDIUM
+* **Status:** Remediated
+
+**Fix Applied:** Now uses environment variable with fallback to empty string (relative URL):
 
 ```typescript
-const apiUrl = import.meta.env.VITE_API_URL || '';
+const apiUrl = import.meta.env.VITE_API_URL || "";
 const res = await fetch(`${apiUrl}/api/auth/psu/exchange`, {...})
 ```
 
+**Verification:** `frontend/src/pages/CallbackPage.tsx:9-30` - Uses `VITE_API_URL` environment variable
+
 ---
 
-### 5. In-Memory OAuth State Store
+### P1 - FIXED: In-Memory OAuth State Store
 
-* **Location:** `backend/src/routes/oauth.routes.ts:8`
-* **Severity:** MEDIUM
-* **Category:** `state_management`
-* **Confidence:** 8/10
+* **Previous Location:** `backend/src/routes/oauth.routes.ts:8`
+* **Previous Severity:** MEDIUM
+* **Status:** Remediated
 
-**Description:** OAuth state is stored in an in-memory Map which will be lost on server restart. Combined with the lenient state validation, this creates an inconsistent security posture.
-
-**Impact:** While not directly exploitable, this design forces the lenient state validation (Finding #1), creating a cascading security weakness. In production with multiple server instances (load balancing), the state will not be shared across instances, causing legitimate OAuth flows to fail.
-
-**Recommendation:** Use a persistent store (Redis/database) for OAuth state in production:
+**Fix Applied:** OAuth state now stored in Redis with 5-minute TTL:
 
 ```typescript
-// Use Redis with 5-minute TTL
-await redis.setex(`oauth_state:${state}`, 300, 'pending');
+const redis = new RedisClient(process.env.REDIS_URL);
+const OAUTH_STATE_PREFIX = "oauth_state:";
+const OAUTH_STATE_TTL_SECONDS = 300;
 
-// On validation:
-const exists = await redis.get(`oauth_state:${state}`);
-if (!exists) {
-  return new Response(JSON.stringify({ error: "Invalid or expired state" }), {
-    status: 400,
-  });
+// State storage with TTL
+await redis.set(
+  `${OAUTH_STATE_PREFIX}${state}`,
+  Date.now().toString(),
+  "EX",
+  OAUTH_STATE_TTL_SECONDS
+);
+```
+
+**Verification:** `backend/src/routes/oauth.routes.ts:14-16, 36-41` - Redis-backed state management
+
+---
+
+## Remaining LOW Severity Findings
+
+### 1. OAuth Token Logging (Acceptable Risk)
+
+* **Location:** `backend/src/routes/oauth.routes.ts:97`
+* **Severity:** LOW
+* **Status:** Accepted with mitigation
+
+**Description:** The OAuth token response status code is still logged. While the token body itself is no longer logged (FIXED), the status code could indirectly reveal information about OAuth flow health.
+
+**Current Code:**
+```typescript
+console.log('PSU Token response status:', tokenRes.status);
+```
+
+**Risk Assessment:** LOW - Status codes (200, 400, 500) do not expose sensitive data. This logging is acceptable for debugging OAuth connectivity issues.
+
+**Recommendation:** Consider removing in production or using a structured logger with log levels:
+```typescript
+if (process.env.NODE_ENV === 'development') {
+  console.log('PSU Token response status:', tokenRes.status);
 }
-await redis.del(`oauth_state:${state}`);
 ```
 
 ---
 
 ## Security Strengths
 
-The following security practices were implemented correctly:
+The following security practices are correctly implemented:
 
-| Practice | Status |
-|----------|--------|
-| SQL parameterized queries | ✅ Implemented |
-| Password hashing (bcrypt) | ✅ Implemented |
-| JWT validation on protected endpoints | ✅ Implemented |
-| CORS configuration | ✅ Implemented |
-| Input validation (Elysia schemas) | ✅ Implemented |
-
----
-
-## Remediation Priority
-
-| Priority | Finding | Effort | Impact |
-|----------|---------|--------|--------|
-| P0 | #2 Hardcoded JWT Secret | Low | Critical |
-| P0 | #1 OAuth State Bypass | Low | High |
-| P0 | #3 Sensitive Data Logging | Low | High |
-| P1 | #4 Hardcoded Localhost URL | Low | Medium |
-| P1 | #5 In-Memory State Store | Medium | Medium |
+| Practice | Status | Location |
+|----------|--------|----------|
+| SQL parameterized queries | Implemented | All database queries via `sql` tagged template |
+| Password hashing (bcrypt, 10 rounds) | Implemented | `auth.service.ts:5` |
+| JWT validation on protected endpoints | Implemented | All auth-protected routes |
+| CORS configuration | Implemented | `index.ts:32-39` |
+| Input validation (Elysia schemas) | Implemented | `auth.routes.ts:44-76` |
+| OAuth state validation (Redis-backed) | Implemented | `oauth.routes.ts:67-78` |
+| JWT_SECRET required (fail-secure) | Implemented | `index.ts:20-24`, `auth.routes.ts:8-12`, `oauth.routes.ts:8-12` |
+| OAuth account takeover prevention | Implemented | `auth.service.ts:84-138` - PSU ID matching only, no email auto-linking |
 
 ---
 
-## Sign-off
+## Security Architecture Review
 
-- [ ] All HIGH severity issues addressed
-- [ ] MEDIUM severity issues reviewed and accepted/deferred
-- [ ] Security strengths documented for team awareness
+### OAuth Flow Security
+
+The OAuth implementation follows security best practices:
+
+1. **State Parameter:** Generated with `crypto.randomUUID()`, stored in Redis with 5-minute TTL
+2. **PKCE-Ready:** While not explicitly using PKCE, the state parameter provides CSRF protection
+3. **Token Handling:** Access tokens from PSU are used only for userinfo fetch, not stored
+4. **Account Linking:** Secure - matches on PSU ID only, prevents email-based account takeover
+
+### Authentication Flow
+
+1. **JWT Tokens:** 7-day expiration, signed with required secret
+2. **Password Storage:** bcrypt with 10 salt rounds
+3. **Session Management:** Stateless JWT, no server-side session storage required
 
 ---
 
-*Generated by Security Reviewer Agent*
+## Recommendations for Future Development
+
+### Priority 1 - Security Hardening
+
+| Feature | Priority | Effort |
+|---------|----------|--------|
+| Rate limiting on auth endpoints | HIGH | Low |
+| Refresh token rotation | HIGH | Medium |
+| JWT blacklist/revocation | MEDIUM | Medium |
+
+### Priority 2 - Monitoring
+
+| Feature | Priority | Effort |
+|---------|----------|--------|
+| Security audit logging | MEDIUM | Low |
+| Failed login attempt tracking | MEDIUM | Low |
+| OAuth flow monitoring dashboard | LOW | Medium |
+
+### Priority 3 - Infrastructure
+
+| Feature | Priority | Effort |
+|---------|----------|--------|
+| Redis cluster for state (production) | MEDIUM | Medium |
+| Secrets management (Vault/AWS Secrets Manager) | LOW | High |
+| CSP headers | LOW | Low |
+
+---
+
+## Environment Variables Required
+
+Ensure the following environment variables are set in production:
+
+```bash
+# Required - Authentication
+JWT_SECRET=<strong-random-secret-min-32-chars>
+
+# Required - OAuth
+PSU_CLIENT_ID=<psu-oauth-client-id>
+PSU_CLIENT_SECRET=<psu-oauth-client-secret>
+PSU_CALLBACK_URL=https://yourdomain.com/callback
+
+# Required - Infrastructure
+REDIS_URL=redis://localhost:6379
+DATABASE_URL=postgresql://user:pass@host:5432/shortlink
+
+# Optional - Production
+NODE_ENV=production
+ALLOWED_ORIGIN=https://yourdomain.com
+```
+
+---
+
+## Remediation Sign-off
+
+| Finding | Status | Verified Date |
+|---------|--------|---------------|
+| #1 OAuth State Bypass | Fixed | 2026-04-21 |
+| #2 Hardcoded JWT Secret | Fixed | 2026-04-21 |
+| #3 Sensitive Data Logging | Fixed | 2026-04-21 |
+| #4 Hardcoded Localhost URL | Fixed | 2026-04-21 |
+| #5 In-Memory State Store | Fixed | 2026-04-21 |
+
+---
+
+## Final Assessment
+
+**Security Posture:** GOOD
+
+All critical and high-severity vulnerabilities have been addressed. The application now implements:
+
+- Secure OAuth flow with proper state validation
+- Required JWT secret (fails securely if missing)
+- Redis-backed state management for production scalability
+- No sensitive data logging
+- Environment-based configuration
+
+**Next Steps:**
+1. Consider implementing rate limiting on authentication endpoints
+2. Set up security monitoring and alerting
+3. Schedule periodic security reviews for new features
+
+---
+
+*Generated by Security Reviewer Agent*  
+*Last Updated: 2026-04-21*

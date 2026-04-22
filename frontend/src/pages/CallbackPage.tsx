@@ -6,6 +6,7 @@ export const CallbackPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setUser } = useAuth();
+  const apiUrl = import.meta.env.VITE_API_URL || "";
 
   useEffect(() => {
     // Check for OAuth error first - navigate immediately, no API calls
@@ -26,7 +27,7 @@ export const CallbackPage = () => {
     // Only proceed with token exchange if we have valid params
     const handleExchange = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/auth/psu/exchange", {
+        const res = await fetch(`${apiUrl}/api/auth/psu/exchange`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code, state }),
@@ -49,7 +50,7 @@ export const CallbackPage = () => {
     };
 
     handleExchange();
-  }, [searchParams, navigate]);
+  }, [apiUrl, searchParams, navigate, setUser]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">

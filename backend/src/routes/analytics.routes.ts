@@ -3,6 +3,12 @@ import { jwt } from "@elysiajs/jwt";
 import { AnalyticsService } from "../services/analytics.service";
 import { LinkService } from "../services/link.service";
 
+// ✅ FIX P0: Validate JWT_SECRET at startup — no fallback allowed
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  throw new Error("JWT_SECRET is required!");
+}
+
 const analyticsService = new AnalyticsService();
 const linkService = new LinkService();
 
@@ -10,10 +16,11 @@ export const analyticsRoutes = new Elysia({ prefix: "/analytics" })
   .use(
     jwt({
       name: "jwt",
-      secret: process.env.JWT_SECRET || "your-secret-key",
+      secret: jwtSecret, // ✅ ใช้ validated secret (ไม่มี fallback)
       exp: "7d",
     })
   )
+
   // Get analytics for a specific link (protected)
   .get(
     "/:linkId",
@@ -43,9 +50,7 @@ export const analyticsRoutes = new Elysia({ prefix: "/analytics" })
       return { success: true, data: analytics };
     },
     {
-      params: t.Object({
-        linkId: t.String(),
-      }),
+      params: t.Object({ linkId: t.String() }),
     }
   )
 
@@ -68,7 +73,7 @@ export const analyticsRoutes = new Elysia({ prefix: "/analytics" })
   })
 
   // Get anonymous user's summary by sessionId
-  .get("/summary/anonymous/:sessionId", async ({ params, set }) => {
+  .get("/summary/anonymous/:sessionId", async ({ params }) => {
     const summary = await analyticsService.getAnonymousSummary(params.sessionId);
     return { success: true, data: summary };
   });

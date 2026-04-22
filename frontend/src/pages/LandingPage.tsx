@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import {
   Link2, CheckCircle, QrCode, BarChart2, Globe, Shield,
   Copy, ExternalLink, TrendingUp, Filter, Download, Bell,
-  Share2, ArrowRight, Smartphone, Monitor, LayoutDashboard, LogOut, User
+  Share2, ArrowRight, Smartphone, Monitor, LayoutDashboard, LogOut, User,
+  Sun, Moon, Languages,
 } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 const glassCard = {
   background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)",
@@ -45,15 +47,55 @@ const QRCodeSVG = () => (
 );
 
 export default function LandingPage() {
+  const {
+    isDarkMode, toggleDarkMode, language, toggleLanguage, t,
+  } = useAuth();
   const [url, setUrl] = useState("");
   const [shortened, setShortened] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userName, setUserName] = useState("");
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   // ✅ FIX 1: ใช้ key "token" ให้ตรงกับ CallbackPage
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const theme = isDarkMode
+    ? {
+        pageBg: "#0f172a",
+        text: "white",
+        muted: "#94a3b8",
+        subtle: "#475569",
+        section: "#1e293b",
+        navBg: "rgba(15,23,42,0.85)",
+        navBorder: "rgba(255,255,255,0.07)",
+        cardBg: "rgba(255,255,255,0.06)",
+        cardBorder: "rgba(255,255,255,0.08)",
+        softBg: "rgba(255,255,255,0.04)",
+        inputIcon: "#475569",
+        menuBg: "#1e293b",
+        menuText: "#cbd5e1",
+        footerText: "#334155",
+        link: "#94a3b8",
+      }
+    : {
+        pageBg: "#f8fafc",
+        text: "#0f172a",
+        muted: "#475569",
+        subtle: "#64748b",
+        section: "#eef2ff",
+        navBg: "rgba(255,255,255,0.88)",
+        navBorder: "rgba(15,23,42,0.08)",
+        cardBg: "rgba(255,255,255,0.88)",
+        cardBorder: "rgba(148,163,184,0.22)",
+        softBg: "rgba(255,255,255,0.7)",
+        inputIcon: "#64748b",
+        menuBg: "#ffffff",
+        menuText: "#334155",
+        footerText: "#64748b",
+        link: "#475569",
+      };
 
   useEffect(() => {
     const token = localStorage.getItem("token"); // ✅ แก้จาก "auth_token" → "token"
@@ -90,14 +132,14 @@ export default function LandingPage() {
       const token = localStorage.getItem("token"); // ✅ แก้จาก "auth_token" → "token"
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch("http://localhost:3000/api/links", {
+      const res = await fetch(`${apiUrl}/api/links`, {
         method: "POST", headers,
         body: JSON.stringify({ url: fullUrl }),
         credentials: "include",
       });
       const data = await res.json();
       if (data.success && data.data) {
-        setShortened(data.data.shortUrl || `http://localhost:3000/${data.data.shortCode}`);
+        setShortened(data.data.shortUrl || `${apiUrl}/${data.data.shortCode}`);
         if (token) setTimeout(() => alert("✅ Link created! Check your Dashboard"), 1000);
       } else throw new Error(data.error || "Failed to create link");
     } catch (err: unknown) {
@@ -117,7 +159,7 @@ export default function LandingPage() {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return (
-    <div style={{ fontFamily: "'Sarabun',sans-serif", backgroundColor: "#0f172a", color: "white", overflowX: "hidden" }}>
+    <div style={{ fontFamily: "'Sarabun',sans-serif", backgroundColor: theme.pageBg, color: theme.text, overflowX: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Manrope:wght@400;600;700;800&display=swap');
         @keyframes gradientShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
@@ -133,20 +175,20 @@ export default function LandingPage() {
         .live-dot { animation: livePing 1.5s cubic-bezier(0,0,0.2,1) infinite; }
         .card-lift { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
         .card-lift:hover { transform: translateY(-5px); }
-        .nav-link { color: #94a3b8; text-decoration: none; font-size: 14px; transition: color 0.2s; }
-        .nav-link:hover { color: white; }
-        .footer-link { color: #475569; text-decoration: none; font-size: 13px; transition: color 0.2s; }
-        .footer-link:hover { color: white; }
+        .nav-link { color: ${theme.link}; text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .nav-link:hover { color: ${theme.text}; }
+        .footer-link { color: ${theme.footerText}; text-decoration: none; font-size: 13px; transition: color 0.2s; }
+        .footer-link:hover { color: ${theme.text}; }
         .user-menu { animation: fadeIn 0.2s ease; }
-        .menu-item:hover { background: rgba(255,255,255,0.08) !important; }
+        .menu-item:hover { background: ${isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(59,130,246,0.08)"} !important; }
       `}</style>
 
       {/* ── NAVBAR ── */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-        background: "rgba(15,23,42,0.85)",
+        background: theme.navBg,
         backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        borderBottom: `1px solid ${theme.navBorder}`,
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px", height: 72, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -161,26 +203,49 @@ export default function LandingPage() {
           <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
             {isLoggedIn && (
               <>
-                <a href="#features" className="nav-link">Features</a>
-                <a href="#analytics" className="nav-link">Analytics</a>
+                <a href="#features" className="nav-link">{t.landing.features}</a>
+                <a href="#analytics" className="nav-link">{t.nav.analytics}</a>
               </>
             )}
           </div>
 
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <button
+              onClick={toggleLanguage}
+              style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
+                borderRadius: 10, border: `1px solid ${theme.navBorder}`, cursor: "pointer",
+                background: theme.softBg, color: theme.link, fontSize: 12, fontWeight: 700,
+              }}
+              title={language === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}
+            >
+              <Languages size={14} />
+              {language === "th" ? "EN" : "TH"}
+            </button>
+            <button
+              onClick={toggleDarkMode}
+              style={{
+                width: 38, height: 38, borderRadius: 10, border: `1px solid ${theme.navBorder}`,
+                cursor: "pointer", background: theme.softBg, color: theme.link,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+              title={isDarkMode ? "Light mode" : "Dark mode"}
+            >
+              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             {!isLoggedIn ? (
               <>
-                <a href="/login" className="nav-link">Sign In</a>
+                <a href="/login" className="nav-link">{t.landing.signIn}</a>
                 <a href="/register" style={{ background: "linear-gradient(135deg,#3b82f6,#2563eb)", color: "white", padding: "10px 20px", borderRadius: 12, fontSize: 14, fontWeight: 600, textDecoration: "none", boxShadow: "0 4px 14px rgba(59,130,246,0.35)" }}>
-                  Get Started
+                  {t.nav.getStarted}
                 </a>
               </>
             ) : (
               <>
-                <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 6, color: "#94a3b8", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "8px 14px", borderRadius: 10, transition: "all 0.2s", background: "rgba(255,255,255,0.04)" }}
-                  onMouseEnter={e => { e.currentTarget.style.color = "white"; e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = "#94a3b8"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}>
-                  <LayoutDashboard size={15} /> Dashboard
+                <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 6, color: theme.link, textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "8px 14px", borderRadius: 10, transition: "all 0.2s", background: theme.softBg }}
+                  onMouseEnter={e => { e.currentTarget.style.color = theme.text; e.currentTarget.style.background = isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(59,130,246,0.08)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = theme.link; e.currentTarget.style.background = theme.softBg; }}>
+                  <LayoutDashboard size={15} /> {t.nav.dashboard}
                 </a>
 
                 <div style={{ position: "relative" }}>
@@ -188,22 +253,22 @@ export default function LandingPage() {
                     <User size={16} />
                   </button>
                   {showUserMenu && (
-                    <div className="user-menu" style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: 6, minWidth: 180, boxShadow: "0 16px 40px rgba(0,0,0,0.4)" }}>
+                    <div className="user-menu" style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, background: theme.menuBg, border: `1px solid ${theme.navBorder}`, borderRadius: 14, padding: 6, minWidth: 180, boxShadow: "0 16px 40px rgba(0,0,0,0.18)" }}>
                       {/* ✅ แสดงชื่อ user */}
                       {userName && (
-                        <div style={{ padding: "10px 14px", fontSize: 12, color: "#64748b", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 4 }}>
+                        <div style={{ padding: "10px 14px", fontSize: 12, color: theme.subtle, borderBottom: `1px solid ${theme.navBorder}`, marginBottom: 4 }}>
                           {userName}
                         </div>
                       )}
-                      <a href="/profile" className="menu-item" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, color: "#cbd5e1", fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "background 0.15s" }}>
-                        <User size={14} /> Profile
+                      <a href="/profile" className="menu-item" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, color: theme.menuText, fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "background 0.15s" }}>
+                        <User size={14} /> {t.landing.profile}
                       </a>
-                      <a href="/dashboard" className="menu-item" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, color: "#cbd5e1", fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "background 0.15s" }}>
-                        <LayoutDashboard size={14} /> Dashboard
+                      <a href="/dashboard" className="menu-item" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, color: theme.menuText, fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "background 0.15s" }}>
+                        <LayoutDashboard size={14} /> {t.nav.dashboard}
                       </a>
-                      <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
+                      <div style={{ height: 1, background: theme.navBorder, margin: "4px 0" }} />
                       <button onClick={handleLogout} className="menu-item" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, color: "#f87171", fontSize: 13, fontWeight: 500, background: "transparent", border: "none", cursor: "pointer", width: "100%", textAlign: "left" }}>
-                        <LogOut size={14} /> Sign Out
+                        <LogOut size={14} /> {t.landing.signOut}
                       </button>
                     </div>
                   )}
@@ -226,34 +291,34 @@ export default function LandingPage() {
                   <span className="live-dot" style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#4ade80", opacity: 0.75 }} />
                   <span style={{ position: "relative", width: 8, height: 8, borderRadius: "50%", background: "#22c55e", display: "block" }} />
                 </span>
-                <span style={{ fontSize: 12, color: "#d1d5db" }}>Now Live — PSU URL Shortener</span>
+                <span style={{ fontSize: 12, color: isDarkMode ? "#d1d5db" : "#334155" }}>{t.landing.badge}</span>
               </div>
 
               <h1 style={{ fontFamily: "'Manrope',sans-serif", fontWeight: 800, fontSize: "clamp(2.5rem,5vw,4.25rem)", lineHeight: 1.05, marginBottom: 20 }}>
-                Shorten Links,<br />
+                {t.landing.heroTitle1},<br />
                 <span style={{ background: "linear-gradient(to right,#60a5fa,#93c5fd,#3b82f6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  Amplify Reach
+                  {t.landing.heroTitle2}
                 </span>
               </h1>
 
-              <p style={{ fontSize: 17, color: "#94a3b8", maxWidth: 480, lineHeight: 1.75, marginBottom: 32 }}>
-                Smart link management with real-time analytics, QR codes, and custom domains — built for PSU.
+              <p style={{ fontSize: 17, color: theme.muted, maxWidth: 480, lineHeight: 1.75, marginBottom: 32 }}>
+                {t.landing.heroDesc}
               </p>
 
-              <div style={{ padding: 8, borderRadius: 18, maxWidth: 520, background: "rgba(255,255,255,0.06)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div style={{ padding: 8, borderRadius: 18, maxWidth: 520, background: theme.cardBg, backdropFilter: "blur(10px)", border: `1px solid ${theme.cardBorder}` }}>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "0 16px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <Link2 size={16} color="#475569" style={{ flexShrink: 0 }} />
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "0 16px", borderRadius: 12, background: theme.softBg, border: `1px solid ${theme.cardBorder}` }}>
+                    <Link2 size={16} color={theme.inputIcon} style={{ flexShrink: 0 }} />
                     <input
                       value={url}
                       onChange={e => setUrl(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && handleShorten()}
-                      placeholder="Paste your long URL here..."
-                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "white", fontSize: 14, fontWeight: 500, padding: "14px 0" }}
+                      placeholder={t.landing.inputPlaceholder}
+                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: theme.text, fontSize: 14, fontWeight: 500, padding: "14px 0" }}
                     />
                   </div>
                   <button onClick={handleShorten} disabled={loading || !url.trim()} style={{ padding: "0 24px", borderRadius: 12, fontWeight: 700, fontSize: 14, color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "linear-gradient(135deg,#3b82f6,#2563eb)", boxShadow: "0 6px 16px rgba(59,130,246,0.3)", opacity: (loading || !url.trim()) ? 0.5 : 1 }}>
-                    {loading ? "..." : <><span>Shorten</span><ArrowRight size={14} /></>}
+                    {loading ? "..." : <><span>{t.landing.shorten}</span><ArrowRight size={14} /></>}
                   </button>
                 </div>
               </div>
@@ -277,11 +342,11 @@ export default function LandingPage() {
 
               <div style={{ marginTop: 20, display: "flex", flexWrap: "wrap", gap: 24 }}>
                 {[
-                  { icon: <CheckCircle size={13} color="#22c55e" />, text: "Free Forever" },
-                  { icon: <QrCode size={13} color="#22c55e" />, text: "Dynamic QR" },
-                  { icon: <Globe size={13} color="#22c55e" />, text: "Custom Domains" },
+                  { icon: <CheckCircle size={13} color="#22c55e" />, text: t.landing.freeForever },
+                  { icon: <QrCode size={13} color="#22c55e" />, text: t.landing.dynamicQR },
+                  { icon: <Globe size={13} color="#22c55e" />, text: t.landing.customDomains },
                 ].map(b => (
-                  <span key={b.text} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
+                  <span key={b.text} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: theme.subtle }}>
                     {b.icon}{b.text}
                   </span>
                 ))}
@@ -338,31 +403,35 @@ export default function LandingPage() {
       </section>
 
       {/* ── STATS ── */}
-      <section style={{ background: "#1e293b", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "40px 0" }}>
+      <section style={{ background: theme.section, borderTop: `1px solid ${theme.navBorder}`, borderBottom: `1px solid ${theme.navBorder}`, padding: "40px 0" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, textAlign: "center" }}>
-          {[{ val: "50K+", label: "Link Architects" }, { val: "12M+", label: "Links Created" }, { val: "99.9%", label: "Uptime" },].map(s => (
+          {[
+            { val: "50K+", label: t.landing.statsArchitects },
+            { val: "12M+", label: t.landing.statsLinks },
+            { val: "99.9%", label: t.landing.statsUptime },
+          ].map((s) => (
             <div key={s.label}>
               <div style={{ fontFamily: "'Manrope',sans-serif", fontWeight: 800, fontSize: "clamp(1.75rem,3vw,2.5rem)", background: "linear-gradient(to right,#60a5fa,#3b82f6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 {s.val}
               </div>
-              <div style={{ fontSize: 14, color: "#475569", marginTop: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 14, color: theme.subtle, marginTop: 4 }}>{s.label}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" style={{ background: "#0f172a", padding: "96px 0" }}>
+      <section id="features" style={{ background: theme.pageBg, padding: "96px 0" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <h2 style={{ fontFamily: "'Manrope',sans-serif", fontWeight: 800, fontSize: "clamp(2rem,4vw,3rem)", marginBottom: 16 }}>
-              Everything You Need,<br />
+              {t.landing.featuresTitle1},<br />
               <span style={{ background: "linear-gradient(to right,#60a5fa,#2563eb)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                Nothing You Don't
+                {t.landing.featuresTitle2}
               </span>
             </h2>
-            <p style={{ color: "#64748b", fontSize: 17, maxWidth: 480, margin: "0 auto" }}>
-              Powerful tools for managing your links at scale.
+            <p style={{ color: theme.subtle, fontSize: 17, maxWidth: 480, margin: "0 auto" }}>
+              {t.landing.featuresDesc}
             </p>
           </div>
 
@@ -500,36 +569,36 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section style={{ background: "#0f172a", padding: "96px 0" }}>
+      <section style={{ background: theme.pageBg, padding: "96px 0" }}>
         <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
           <h2 style={{ fontFamily: "'Manrope',sans-serif", fontWeight: 800, fontSize: "clamp(2rem,4vw,3rem)", marginBottom: 16 }}>
-            Ready to Grow?<br />
+            {t.landing.ctaTitle1}<br />
             <span style={{ background: "linear-gradient(to right,#60a5fa,#2563eb)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Start for Free Today
+              {t.landing.ctaTitle2}
             </span>
           </h2>
-          <p style={{ color: "#64748b", fontSize: 17, marginBottom: 40, lineHeight: 1.7 }}>
-            Join thousands of PSU users already using LinkPulse.
+          <p style={{ color: theme.subtle, fontSize: 17, marginBottom: 40, lineHeight: 1.7 }}>
+            {t.landing.ctaDesc}
           </p>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
             {!isLoggedIn ? (
               <a href="/register" style={{ padding: "16px 36px", borderRadius: 14, fontWeight: 700, fontSize: 16, color: "white", textDecoration: "none", display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(135deg,#3b82f6,#2563eb)", boxShadow: "0 12px 28px rgba(59,130,246,0.3)" }}>
-                Get Started Free <ArrowRight size={18} />
+                {t.landing.getStartedFree} <ArrowRight size={18} />
               </a>
             ) : (
               <a href="/dashboard" style={{ padding: "16px 36px", borderRadius: 14, fontWeight: 700, fontSize: 16, color: "white", textDecoration: "none", display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(135deg,#3b82f6,#2563eb)", boxShadow: "0 12px 28px rgba(59,130,246,0.3)" }}>
-                Go to Dashboard <LayoutDashboard size={18} />
+                {t.landing.goToDashboard} <LayoutDashboard size={18} />
               </a>
             )}
-            <a href="#features" style={{ padding: "16px 36px", borderRadius: 14, fontWeight: 700, fontSize: 16, color: "white", textDecoration: "none", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              Explore Features
+            <a href="#features" style={{ padding: "16px 36px", borderRadius: 14, fontWeight: 700, fontSize: 16, color: theme.text, textDecoration: "none", background: theme.cardBg, border: `1px solid ${theme.cardBorder}` }}>
+              {t.landing.exploreFeatures}
             </a>
           </div>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: "#1e293b", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "48px 0" }}>
+      <footer style={{ background: theme.section, borderTop: `1px solid ${theme.navBorder}`, padding: "48px 0" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#3b82f6,#1d4ed8)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -537,9 +606,9 @@ export default function LandingPage() {
             </div>
             <span style={{ fontFamily: "'Manrope',sans-serif", fontWeight: 800, fontSize: 18 }}>LinkPulse</span>
           </div>
-          <p style={{ fontSize: 13, color: "#334155" }}>© 2025 LinkPulse · PSU · All rights reserved</p>
+          <p style={{ fontSize: 13, color: theme.footerText }}>{t.landing.footerCopyright}</p>
           <div style={{ display: "flex", gap: 24 }}>
-            {["Privacy Policy", "Terms", "Contact"].map(l => (
+            {[t.landing.privacyPolicy, t.landing.terms, t.landing.contact].map(l => (
               <a key={l} href="#" className="footer-link">{l}</a>
             ))}
           </div>

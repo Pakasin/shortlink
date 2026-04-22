@@ -11,6 +11,8 @@ bun.lockb
 .env
 .env.local
 .env.*.local
+.env.example
+.env.template
 .env.production.local
 
 # ═══ BUILD & DIST ═══

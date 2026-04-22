@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { cors } from "@elysiajs/cors";
@@ -16,6 +17,11 @@ import "./config/database";
 
 const PORT = Number(process.env.PORT) || 3000;
 const isDev = (process.env.NODE_ENV || "development") === "development";
+const jwtSecret = process.env.JWT_SECRET;
+
+if (!jwtSecret) {
+  throw new Error("JWT_SECRET is required!");
+}
 
 const linkService = new LinkService();
 const analyticsService = new AnalyticsService();
@@ -33,12 +39,18 @@ const app = new Elysia()
 )
 .use(
   jwt({
-    secret: process.env.JWT_SECRET || "your-secret-key",
+    secret: jwtSecret,
     exp: "7d",
   })
 )
 
-// ── Health ─────────────────────────────
+// ✅ favicon.ico handler (ใหม่)
+.get("/favicon.ico", ({ set }) => {
+  set.status = 404;
+  return null;
+})
+
+// ── Health ─────────────────────────────  
 .get("/health", () => ({
   status: "ok",
 }))
@@ -64,7 +76,6 @@ const app = new Elysia()
 // ── Error handler ───────────────────
 .onError(({ code, error, set }) => {
   console.error(`[Error ${code}]`, error);
-
   set.status = 500;
   return { error: "Internal server error" };
 })

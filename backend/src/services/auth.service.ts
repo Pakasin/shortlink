@@ -21,7 +21,6 @@ export class AuthService {
 
   // ═══ REGISTER ═══
   async register(data: RegisterRequest): Promise<Omit<User, "passwordHash">> {
-    // Check duplicate email
     const existing = await sql`
       SELECT id FROM users WHERE email = ${data.email}
     `;
@@ -87,23 +86,35 @@ export class AuthService {
     email: string,
     name: string
   ): Promise<User> {
-    const [existing] = await sql`
+    // ✅ Step 1: Match on psu_id only (prevents account takeover via email)
+    const [existingPsuUser] = await sql`
       SELECT id, email, name, created_at FROM users 
-      WHERE psu_id = ${psuId} OR email = ${email}
+      WHERE psu_id = ${psuId}
     `;
 
-    if (existing) {
-      await sql`
-        UPDATE users SET psu_id = ${psuId}, provider = 'psu' WHERE id = ${existing.id}
-      `;
+    if (existingPsuUser) {
       return {
-        id: existing.id,
-        email: existing.email,
-        name: existing.name || null,
-        createdAt: existing.created_at,
+        id: existingPsuUser.id,
+        email: existingPsuUser.email,
+        name: existingPsuUser.name || null,
+        createdAt: existingPsuUser.created_at,
       };
     }
 
+    // ✅ Step 2: Check email collision — DON'T auto-link
+    const [existingEmailUser] = await sql`
+      SELECT id FROM users WHERE email = ${email}
+    `;
+
+    if (existingEmailUser) {
+      // ✅ FIX P0: Generic message — ไม่ leak auth method หรือ email
+      throw new Error(
+        "This email is already associated with another account. " +
+        "Please login with your original method or contact support."
+      );
+    }
+
+    // ✅ Step 3: New email + new psu_id → Safe to create
     const [user] = await sql`
       INSERT INTO users (email, name, psu_id, provider)
       VALUES (${email}, ${name}, ${psuId}, 'psu')

@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Navbar } from "./components/Navbar";
@@ -12,10 +12,13 @@ import { CreateLinkPage } from "./pages/CreateLinkPage";
 import { CallbackPage } from "./pages/CallbackPage";
 
 function App() {
+  const location = useLocation();
+  const isLandingPage = location.pathname === "/";
+
   return (
     <AuthProvider>
       <div className="min-h-screen flex flex-col">
-        <Navbar />
+        {!isLandingPage && <Navbar />}
         <main className="flex-grow">
           <Routes>
             {/* Public Routes */}
@@ -32,7 +35,7 @@ function App() {
             </Route>
           </Routes>
         </main>
-        <Footer />
+        {!isLandingPage && <Footer />}
       </div>
     </AuthProvider>
   );

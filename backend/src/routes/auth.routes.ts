@@ -1,15 +1,21 @@
+import "dotenv/config";
 import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { AuthService } from "../services/auth.service";
 import type { LoginRequest, RegisterRequest } from "shortlink-shared";
 
 const authService = new AuthService();
+const jwtSecret = process.env.JWT_SECRET;
+
+if (!jwtSecret) {
+  throw new Error("JWT_SECRET is required!");
+}
 
 export const authRoutes = new Elysia({ prefix: "/auth" })
   .use(
     jwt({
       name: "jwt",
-      secret: process.env.JWT_SECRET || "your-secret-key",
+      secret: jwtSecret,
       exp: "7d",
     })
   )
